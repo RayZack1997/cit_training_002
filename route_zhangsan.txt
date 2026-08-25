@@ -1,4 +1,0 @@
-116.4074	39.9042	current location	carrier
-116.4100	39.9050	apple,banana	notget
-116.4120	39.9080	package1	notget
-116.4150	39.9100	package2	notget

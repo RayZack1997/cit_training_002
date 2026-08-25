@@ -8,20 +8,46 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <!-- 自定义样式 -->
     <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        /* 模态框样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 50%;
+            max-height: 70%;
+            overflow-y: auto;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
 </head>
 <body>
     <div id="sidebar">
         <h2>路径列表</h2>
-        <!-- 筛选区 -->
-        <div id="filter-area" style="display:flex; flex-wrap:wrap; gap:5px; margin-bottom:10px;">
-            <input type="text" id="filter-person" placeholder="人物" style="width:80px;">
-            <input type="text" id="filter-item" placeholder="物品" style="width:80px;">
-            <input type="date" id="filter-date-from" style="width:120px;">
-            <input type="date" id="filter-date-to" style="width:120px;">
-            <button id="btn-filter">筛选</button>
-            <button id="btn-clear-filter">重置</button>
-        </div>
-        <hr>
         <div id="path-list"></div>
         <div id="path-actions" style="margin:8px 0;">
             <button id="btn-delete-selected">删除选中</button>
@@ -34,13 +60,19 @@
         <h3>导入新路径</h3>
         <form id="upload-form" enctype="multipart/form-data" style="display:flex; flex-direction:column; gap:5px;">
             <input type="file" name="file" accept=".txt" required>
-            <input type="text" name="person_name" placeholder="人物名称">
-            <input type="date" name="pickup_date">
-            <input type="text" name="items" placeholder="物品名称，逗号分隔">
             <button type="submit">上传</button>
         </form>
     </div>
     <div id="map"></div>
+
+    <!-- 弹出模态框 -->
+    <div id="waypoint-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" id="modal-close">&times;</span>
+            <h3 id="modal-title">轨迹点列表</h3>
+            <div id="modal-waypoint-list"></div>
+        </div>
+    </div>
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

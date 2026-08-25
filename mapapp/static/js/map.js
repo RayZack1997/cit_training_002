@@ -22,23 +22,9 @@ async function fetchJSON(url, options = {}) {
     return await response.json();
 }
 
-function getFilterValues() {
-    return {
-        person: document.getElementById('filter-person')?.value.trim() || '',
-        item: document.getElementById('filter-item')?.value.trim() || '',
-        date_from: document.getElementById('filter-date-from')?.value || '',
-        date_to: document.getElementById('filter-date-to')?.value || '',
-    };
-}
-
 // ==================== 路径列表渲染 ====================
-async function refreshPathList(filters = {}) {
-    const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
-        if (value) params.append(key, value);
-    });
-    const query = params.toString();
-    const paths = await fetchJSON('/api/paths/' + (query ? `?${query}` : ''));
+async function refreshPathList() {
+    const paths = await fetchJSON('/api/paths/');
 
     const container = document.getElementById('path-list');
     container.innerHTML = '';
@@ -58,23 +44,20 @@ async function refreshPathList(filters = {}) {
 
         itemDiv.innerHTML = `
             <div style="display:flex; align-items:center; gap:6px;">
-                <input type="checkbox" class="display-checkbox" value="${path.id}" title="在地图显示">
-                <input type="checkbox" class="select-checkbox" value="${path.id}" title="选择删除">
+                <input type="checkbox" class="path-checkbox" value="${path.id}">
                 <span class="color-dot" style="background-color: ${color}; width:12px; height:12px; border-radius:50%; display:inline-block;"></span>
-                <label style="flex:1; cursor:pointer;">${path.name}</label>
+                <label style="flex:1; cursor:pointer;">${path.name} (${path.point_count}点)</label>
+                <button class="btn-detail" data-id="${path.id}" title="查看轨迹点列表">详情</button>
                 <button class="btn-replace" data-id="${path.id}" title="替换文件">替换</button>
                 <button class="btn-delete-single" data-id="${path.id}" title="删除该路径">删</button>
-            </div>
-            <div style="font-size:12px; color:#555; margin-top:4px; margin-left:24px;">
-                人物：${path.person_name || '未知'} ｜ 日期：${path.pickup_date || '未知'} ｜ 物品：${(path.items || []).join(', ') || '无'}
             </div>
         `;
 
         container.appendChild(itemDiv);
 
-        // 显示复选框：控制地图图层
-        const displayCheckbox = itemDiv.querySelector('.display-checkbox');
-        displayCheckbox.addEventListener('change', (e) => {
+        // 唯一复选框：控制地图显示
+        const checkbox = itemDiv.querySelector('.path-checkbox');
+        checkbox.addEventListener('change', (e) => {
             if (e.target.checked) {
                 showPath(path.id);
             } else {
@@ -88,7 +71,7 @@ async function refreshPathList(filters = {}) {
                 const formData = new FormData();
                 formData.append('id', path.id);
                 await fetchJSON('/delete-paths/', { method: 'POST', body: formData });
-                refreshPathList(getFilterValues());
+                refreshPathList();
                 // 同时清理可能存在的图层
                 if (pathLayers[path.id]) {
                     map.removeLayer(pathLayers[path.id]);
@@ -96,8 +79,19 @@ async function refreshPathList(filters = {}) {
                     delete loadedPaths[path.id];
                 }
                 checkedPathIds = checkedPathIds.filter(id => id !== path.id);
+                delete waypointDataCache[path.id];
                 updateWaypointList();
             }
+        });
+
+        // 详情按钮：弹出模态框显示轨迹点列表
+        itemDiv.querySelector('.btn-detail').addEventListener('click', async () => {
+            let waypoints = waypointDataCache[path.id];
+            if (!waypoints) {
+                waypoints = await fetchJSON(`/api/paths/${path.id}/waypoints/`);
+                waypointDataCache[path.id] = waypoints;
+            }
+            showWaypointModal(path.name, waypoints);
         });
 
         // 替换按钮：弹出文件选择
@@ -109,7 +103,6 @@ async function refreshPathList(filters = {}) {
                 if (fileInput.files.length === 0) return;
                 const formData = new FormData();
                 formData.append('file', fileInput.files[0]);
-                // 可选：同时修改元数据，这里保持原元数据不变，后端会保留
                 try {
                     const result = await fetchJSON(`/replace-path/${path.id}/`, {
                         method: 'POST',
@@ -117,7 +110,7 @@ async function refreshPathList(filters = {}) {
                     });
                     if (result.success) {
                         alert(`路径“${path.name}”文件已替换`);
-                        refreshPathList(getFilterValues());
+                        refreshPathList();
                         // 如果该路径正在地图显示，需重新加载
                         if (pathLayers[path.id]) {
                             map.removeLayer(pathLayers[path.id]);
@@ -208,26 +201,45 @@ function updateWaypointList() {
         const div = document.createElement('div');
         div.style.marginBottom = '4px';
         const statusText = w.status === 'carrier' ? '已取' : '未取';
-        div.innerHTML = `<b>${w.seq}.</b> ${w.info} (${statusText})`;
+        div.innerHTML = `<b>${w.seq}.</b> ${w.info || '无'} (${statusText})`;
         container.appendChild(div);
     });
 }
 
-// ==================== 筛选与批量操作 ====================
-document.getElementById('btn-filter')?.addEventListener('click', () => {
-    refreshPathList(getFilterValues());
-});
+// ==================== 弹出模态框 ====================
+function showWaypointModal(pathName, waypoints) {
+    const modal = document.getElementById('waypoint-modal');
+    const title = document.getElementById('modal-title');
+    const listContainer = document.getElementById('modal-waypoint-list');
 
-document.getElementById('btn-clear-filter')?.addEventListener('click', () => {
-    ['filter-person', 'filter-item', 'filter-date-from', 'filter-date-to'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = '';
+    title.textContent = `${pathName} - 轨迹点列表`;
+    listContainer.innerHTML = '';
+
+    waypoints.forEach(w => {
+        const div = document.createElement('div');
+        div.style.marginBottom = '4px';
+        const statusText = w.status === 'carrier' ? '已取' : '未取';
+        div.innerHTML = `<b>${w.seq}.</b> ${w.info || '无'} (${statusText})`;
+        listContainer.appendChild(div);
     });
-    refreshPathList();
+
+    modal.style.display = 'block';
+}
+
+// 关闭模态框
+document.getElementById('modal-close')?.addEventListener('click', () => {
+    document.getElementById('waypoint-modal').style.display = 'none';
+});
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('waypoint-modal');
+    if (e.target === modal) {
+        modal.style.display = 'none';
+    }
 });
 
+// ==================== 批量操作 ====================
 document.getElementById('btn-delete-selected')?.addEventListener('click', async () => {
-    const selected = [...document.querySelectorAll('.select-checkbox:checked')].map(cb => cb.value);
+    const selected = [...document.querySelectorAll('.path-checkbox:checked')].map(cb => cb.value);
     if (selected.length === 0) {
         alert('请先勾选要删除的路径');
         return;
@@ -236,7 +248,7 @@ document.getElementById('btn-delete-selected')?.addEventListener('click', async 
         const formData = new FormData();
         selected.forEach(id => formData.append('ids[]', id));
         await fetchJSON('/delete-paths/', { method: 'POST', body: formData });
-        refreshPathList(getFilterValues());
+        refreshPathList();
         // 清理已删除路径的图层和状态
         selected.forEach(id => {
             if (pathLayers[id]) {
@@ -272,7 +284,6 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
     e.preventDefault();
     const form = e.target;
     const formData = new FormData(form);
-    // 前端提醒：如果文件名已存在，后端会覆盖
     try {
         const result = await fetchJSON('/upload/', {
             method: 'POST',
@@ -281,7 +292,7 @@ document.getElementById('upload-form')?.addEventListener('submit', async (e) => 
         if (result.success) {
             alert(result.message || `导入成功：${result.name}`);
             form.reset();
-            refreshPathList(getFilterValues());
+            refreshPathList();
         } else {
             alert(`导入失败：${result.message}`);
         }
