@@ -1,15 +1,19 @@
 from django.db import models
-
-
-
 class Path(models.Model):
     name = models.CharField(max_length=255, verbose_name="路径名称")
     color = models.CharField(max_length=20, default="#e6194b", verbose_name="显示颜色")
     description = models.CharField(max_length=500, blank=True, null=True, verbose_name="备注")
+    person_name = models.CharField(max_length=100, blank=True, null=True, verbose_name="人物名称")
+    pickup_date = models.DateField(blank=True, null=True, verbose_name="取得物品日期")
+    items = models.JSONField(default=list, blank=True, verbose_name="物品名称列表")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="导入时间")
 
     def __str__(self):
         return self.name
+
+
+
+
 
 class Waypoint(models.Model):
     path = models.ForeignKey(Path, on_delete=models.CASCADE, related_name='waypoints')
