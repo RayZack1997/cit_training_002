@@ -5,6 +5,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.core.files.storage import FileSystemStorage
 import os
 from django.conf import settings
+from .services import parse_txt_file
 # Create your views here.
 
 
