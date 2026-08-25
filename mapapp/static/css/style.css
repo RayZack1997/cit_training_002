@@ -1,0 +1,22 @@
+body {
+    margin: 0;
+    display: flex;
+    height: 100vh;
+}
+#sidebar {
+    width: 300px;
+    background: #f4f4f4;
+    padding: 15px;
+    box-sizing: border-box;
+    overflow-y: auto;
+}
+#map {
+    flex: 1;
+    height: 100%;
+}
+.path-item {
+    margin-bottom: 8px;
+}
+.path-item label {
+    cursor: pointer;
+}

@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>取物顺序可视化</title>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div id="sidebar">
+        <h2>路径列表</h2>
+        <div id="path-list"></div>
+        <hr>
+        <h3>导入新路径</h3>
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" name="file" accept=".txt" required>
+            <button type="submit">上传</button>
+        </form>
+    </div>
+    <div id="map"></div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- 自定义 JS -->
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/map.js"></script>
+</body>
+</html>
